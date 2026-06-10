@@ -230,6 +230,8 @@ main{max-width:1080px;margin:0 auto;padding:26px 24px 80px}
   padding:12px 14px;color:var(--text);background:var(--bg);
 }
 .campo input:focus,.campo select:focus{outline:none;border-color:var(--blue);background:#fff}
+.campo input[readonly]{background:#EEF1F6;color:var(--muted);cursor:default}
+.campo input[readonly]:focus{border-color:var(--border);background:#EEF1F6}
 .campo select{
   appearance:none;-webkit-appearance:none;cursor:pointer;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%237A86A3' d='M6 8 0 0h12z'/%3E%3C/svg%3E");
@@ -361,15 +363,33 @@ main{max-width:1080px;margin:0 auto;padding:26px 24px 80px}
     </div>
     <div class="campo">
       <label for="m-tema">Matéria</label>
-      <select id="m-tema"></select>
+      <select id="m-tema" onchange="syncInstrutor()"></select>
     </div>
     <div class="campo">
       <label for="m-instrutor">Instrutor</label>
-      <select id="m-instrutor"></select>
+      <input type="text" id="m-instrutor" readonly>
     </div>
     <div class="modal-acoes">
       <button class="btn btn-fantasma" onclick="fecharModal()">Cancelar</button>
       <button class="btn btn-primario" id="btn-criar" onclick="criarAula()">Criar aula</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL DETALHE DA AULA (somente leitura) ================= -->
+<div class="modal-bg" id="modal-detalhe" onclick="if(event.target===this)fecharDetalhe()">
+  <div class="modal" style="max-width:480px">
+    <h3 id="det-titulo">–</h3>
+    <p id="det-sub" style="font-size:.8rem;color:var(--muted);margin:-10px 0 16px"></p>
+    <div class="contador" style="background:var(--bg);border-radius:12px;padding:12px;margin-bottom:16px;justify-content:space-around">
+      <div><div class="n p" id="det-p" style="color:#2E8B8A">0</div><div class="l" style="color:var(--muted)">Presentes</div></div>
+      <div><div class="n f" id="det-f">0</div><div class="l" style="color:var(--muted)">Faltas</div></div>
+      <div><div class="n j" id="det-j" style="color:#B07B2E">0</div><div class="l" style="color:var(--muted)">Justif.</div></div>
+    </div>
+    <div id="det-lista" style="max-height:42vh;overflow:auto;display:flex;flex-direction:column;gap:8px"></div>
+    <div class="modal-acoes">
+      <button class="btn btn-fantasma" onclick="fecharDetalhe()">Fechar</button>
+      <button class="btn btn-primario" onclick="editarDoDetalhe()">Editar chamada</button>
     </div>
   </div>
 </div>
@@ -388,12 +408,13 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxDeoHU_-P0Vnne3k2DbUm0
 
 const FREQ_MINIMA = 75; // % mínima exigida no curso
 
-// Matérias fixas do curso (dropdown). Instrutores vêm da aba INSTRUTORES da planilha.
-const MATERIAS = [
-  'Meteorologia',
-  'Regulamentos de Tráfego Aéreo',
-  'Performance',
-  'Gerenciamento de Anormalidades'
+// Matérias do curso, cada uma com seu instrutor fixo.
+// Para alterar instrutor/matéria, edite aqui e dê push (deploy automático).
+const CURSO = [
+  { materia: 'Meteorologia', instrutor: 'Brandão' },
+  { materia: 'Performance', instrutor: 'Bruce' },
+  { materia: 'Regulamentos de Tráfego Aéreo', instrutor: 'Ramos' },
+  { materia: 'Gerenciamento de Anormalidades', instrutor: 'Arantes' }
 ];
 
 // Logo SAFE colorido (usado no PDF). raw.githubusercontent permite CORS.
@@ -439,15 +460,16 @@ function renderTudo() {
 
 function popularSelects() {
   const selTema = document.getElementById('m-tema');
-  selTema.innerHTML = MATERIAS.map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
+  selTema.innerHTML = CURSO.map(c =>
+    `<option value="${esc(c.materia)}">${esc(c.materia)}</option>`).join('');
+  syncInstrutor();
+}
 
-  const selInst = document.getElementById('m-instrutor');
-  const lista = DB.instrutores || [];
-  if (!lista.length) {
-    selInst.innerHTML = '<option value="">— cadastre na aba INSTRUTORES —</option>';
-  } else {
-    selInst.innerHTML = lista.map(i => `<option value="${esc(i)}">${esc(i)}</option>`).join('');
-  }
+// Preenche o instrutor automaticamente conforme a matéria escolhida
+function syncInstrutor() {
+  const materia = document.getElementById('m-tema').value;
+  const par = CURSO.find(c => c.materia === materia);
+  document.getElementById('m-instrutor').value = par ? par.instrutor : '';
 }
 
 function renderStats() {
@@ -473,7 +495,7 @@ function renderAulas() {
     const [ano, mes, dia] = a.data.split('-');
     const feita = a.status === 'REALIZADA';
     return `
-    <div class="aula-card">
+    <div class="aula-card" onclick="cardClick(event,'${a.id}',${feita})" style="cursor:pointer">
       <div class="aula-data">
         <div class="dia">${dia}</div>
         <div class="mes">${MESES[+mes - 1]}/${ano.slice(2)}</div>
@@ -623,7 +645,7 @@ async function salvarChamada() {
 function abrirModal() {
   document.getElementById('m-data').value = new Date().toISOString().slice(0, 10);
   document.getElementById('m-tema').selectedIndex = 0;
-  document.getElementById('m-instrutor').selectedIndex = 0;
+  syncInstrutor();
   document.getElementById('modal-bg').classList.add('aberto');
   document.getElementById('m-tema').focus();
 }
@@ -668,6 +690,73 @@ async function excluirAula(idAula) {
   } catch (e) {
     toast('Erro: ' + e.message, 'erro');
   }
+}
+
+/* ============================================================
+ * DETALHE DA AULA (clicar no card)
+ * ============================================================ */
+let detalheIdAula = null;
+
+function cardClick(e, idAula, feita) {
+  if (e.target.closest('.aula-acoes')) return; // não dispara ao clicar nos botões
+  if (feita) abrirDetalhe(idAula);
+  else abrirChamada(idAula);
+}
+
+function abrirDetalhe(idAula) {
+  const aula = DB.aulas.find(a => a.id === idAula);
+  if (!aula) return;
+  detalheIdAula = idAula;
+
+  const [ano, mes, dia] = aula.data.split('-');
+  document.getElementById('det-titulo').textContent = aula.tema;
+  document.getElementById('det-sub').textContent =
+    `${dia}/${mes}/${ano}` + (aula.instrutor ? ' · Instrutor: ' + aula.instrutor : '');
+
+  const reg = {};
+  DB.presencas.filter(p => p.idAula === idAula).forEach(p => { reg[p.idAluno] = p.status; });
+
+  const ROTULO = {
+    P: ['Presente', 'var(--teal)'],
+    F: ['Falta', 'var(--red)'],
+    J: ['Justificada', 'var(--amber)']
+  };
+  let cp = 0, cf = 0, cj = 0;
+
+  document.getElementById('det-lista').innerHTML = DB.alunos.map(al => {
+    const st = reg[al.id];
+    if (st === 'P') cp++; else if (st === 'F') cf++; else if (st === 'J') cj++;
+    const info = ROTULO[st];
+    const badge = info
+      ? `<span style="display:inline-flex;align-items:center;gap:6px">
+           <span style="background:${info[1]};color:#fff;font-weight:800;font-size:.72rem;width:24px;height:24px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center">${st}</span>
+           <span style="font-size:.78rem;color:var(--muted)">${info[0]}</span>
+         </span>`
+      : '<span style="font-size:.75rem;color:var(--muted)">Sem registro</span>';
+    return `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--border);border-radius:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:.88rem">${esc(al.nome)}</div>
+          ${al.canac ? '<div style="font-size:.7rem;color:var(--muted)">CANAC ' + esc(al.canac) + '</div>' : ''}
+        </div>
+        ${badge}
+      </div>`;
+  }).join('');
+
+  document.getElementById('det-p').textContent = cp;
+  document.getElementById('det-f').textContent = cf;
+  document.getElementById('det-j').textContent = cj;
+
+  document.getElementById('modal-detalhe').classList.add('aberto');
+}
+
+function fecharDetalhe() {
+  document.getElementById('modal-detalhe').classList.remove('aberto');
+}
+
+function editarDoDetalhe() {
+  fecharDetalhe();
+  if (detalheIdAula) abrirChamada(detalheIdAula);
 }
 
 /* ============================================================
