@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
+<title>Controle de Presença | Preparatório Tripulante Azul — SAFE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@600;700;800&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#1D2951;
+  --navy-deep:#141D3B;
+  --blue:#5BAEE2;
+  --teal:#60C0BF;
+  --red:#E2606B;
+  --amber:#E2A95B;
+  --bg:#F4F6FA;
+  --card:#FFFFFF;
+  --border:#E3E8F0;
+  --text:#1D2951;
+  --muted:#7A86A3;
+  --radius:14px;
+  --shadow:0 2px 12px rgba(29,41,81,.07);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:'Montserrat',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+}
+h1,h2,h3{font-family:'Raleway',sans-serif}
+
+/* ============ HEADER ============ */
+header{
+  background:linear-gradient(135deg,var(--navy-deep) 0%,var(--navy) 70%);
+  color:#fff;
+  padding:22px 24px 0;
+}
+.header-inner{max-width:1080px;margin:0 auto}
+.header-top{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.header-top img{height:42px}
+.header-title h1{font-size:1.15rem;font-weight:800;letter-spacing:.3px}
+.header-title p{
+  font-size:.72rem;font-weight:600;letter-spacing:1.6px;text-transform:uppercase;
+  color:var(--blue);margin-top:3px;
+}
+.curso-badge{
+  margin-left:auto;
+  background:rgba(91,174,226,.15);
+  border:1px solid rgba(91,174,226,.45);
+  color:#fff;
+  font-size:.72rem;font-weight:600;letter-spacing:.6px;
+  padding:7px 14px;border-radius:99px;white-space:nowrap;
+}
+nav{display:flex;gap:4px;margin-top:20px;overflow-x:auto}
+nav button{
+  font-family:'Raleway',sans-serif;
+  background:none;border:none;color:rgba(255,255,255,.6);
+  font-size:.85rem;font-weight:700;
+  padding:12px 18px;cursor:pointer;
+  border-bottom:3px solid transparent;
+  transition:color .15s,border-color .15s;
+  white-space:nowrap;
+}
+nav button:hover{color:#fff}
+nav button.ativo{color:#fff;border-bottom-color:var(--blue)}
+nav button:focus-visible{outline:2px solid var(--blue);outline-offset:-2px}
+
+/* ============ LAYOUT ============ */
+main{max-width:1080px;margin:0 auto;padding:26px 24px 80px}
+.view{display:none}
+.view.ativa{display:block;animation:fade .25s ease}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ============ STATS ============ */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:26px}
+.stat{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:18px 20px;box-shadow:var(--shadow);
+}
+.stat .num{font-family:'Raleway',sans-serif;font-size:1.9rem;font-weight:800;line-height:1.1}
+.stat .lbl{font-size:.72rem;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin-top:4px}
+.stat.azul .num{color:var(--blue)}
+.stat.teal .num{color:var(--teal)}
+
+/* ============ SEÇÕES / CARDS ============ */
+.secao-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.secao-head h2{font-size:1.05rem;font-weight:800}
+.btn{
+  font-family:'Raleway',sans-serif;
+  border:none;border-radius:10px;cursor:pointer;
+  font-size:.85rem;font-weight:700;
+  padding:11px 20px;
+  transition:transform .1s,box-shadow .15s,background .15s;
+}
+.btn:active{transform:scale(.97)}
+.btn:focus-visible{outline:3px solid rgba(91,174,226,.5);outline-offset:1px}
+.btn-primario{background:var(--navy);color:#fff}
+.btn-primario:hover{background:var(--navy-deep);box-shadow:0 4px 14px rgba(29,41,81,.25)}
+.btn-azul{background:var(--blue);color:#fff}
+.btn-azul:hover{box-shadow:0 4px 14px rgba(91,174,226,.4)}
+.btn-fantasma{background:none;color:var(--muted);border:1px solid var(--border)}
+.btn-fantasma:hover{color:var(--navy);border-color:var(--navy)}
+
+.card-lista{display:flex;flex-direction:column;gap:10px}
+.aula-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:16px 20px;
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+}
+.aula-data{
+  background:var(--bg);border:1px solid var(--border);border-radius:10px;
+  text-align:center;padding:8px 12px;min-width:64px;
+}
+.aula-data .dia{font-family:'Raleway',sans-serif;font-size:1.25rem;font-weight:800;line-height:1}
+.aula-data .mes{font-size:.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-top:2px}
+.aula-info{flex:1;min-width:180px}
+.aula-info .tema{font-weight:700;font-size:.95rem}
+.aula-info .sub{font-size:.78rem;color:var(--muted);margin-top:3px}
+.tag{
+  font-size:.68rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
+  padding:5px 12px;border-radius:99px;
+}
+.tag-feita{background:rgba(96,192,191,.14);color:#2E8B8A;border:1px solid rgba(96,192,191,.4)}
+.tag-pendente{background:rgba(226,169,91,.14);color:#B07B2E;border:1px solid rgba(226,169,91,.45)}
+.aula-acoes{display:flex;gap:8px;align-items:center}
+.btn-mini{padding:9px 16px;font-size:.78rem}
+.btn-excluir{
+  background:none;border:none;cursor:pointer;color:var(--muted);
+  font-size:1rem;padding:6px;border-radius:8px;line-height:1;
+}
+.btn-excluir:hover{color:var(--red);background:rgba(226,96,107,.08)}
+
+.vazio{
+  text-align:center;color:var(--muted);padding:50px 20px;
+  background:var(--card);border:1px dashed var(--border);border-radius:var(--radius);
+  font-size:.9rem;
+}
+
+/* ============ CHAMADA ============ */
+.chamada-topo{
+  background:var(--navy);color:#fff;border-radius:var(--radius);
+  padding:20px 24px;margin-bottom:18px;
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+}
+.chamada-topo .info{flex:1;min-width:200px}
+.chamada-topo .info h2{font-size:1.05rem;font-weight:800}
+.chamada-topo .info p{font-size:.78rem;color:rgba(255,255,255,.65);margin-top:4px}
+.contador{display:flex;gap:18px}
+.contador div{text-align:center}
+.contador .n{font-family:'Raleway',sans-serif;font-size:1.4rem;font-weight:800}
+.contador .l{font-size:.62rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.6)}
+.contador .n.p{color:var(--teal)}
+.contador .n.f{color:var(--red)}
+.contador .n.j{color:var(--amber)}
+
+.aluno-row{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:14px 18px;
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+}
+.aluno-nome{flex:1;min-width:160px}
+.aluno-nome .n{font-weight:600;font-size:.92rem}
+.aluno-nome .c{font-size:.72rem;color:var(--muted);margin-top:2px}
+.toggle{display:flex;gap:6px}
+.toggle button{
+  font-family:'Raleway',sans-serif;
+  border:1.5px solid var(--border);background:var(--card);color:var(--muted);
+  border-radius:10px;cursor:pointer;
+  font-size:.8rem;font-weight:800;
+  min-width:52px;padding:11px 0;
+  transition:all .12s;
+}
+.toggle button:focus-visible{outline:3px solid rgba(91,174,226,.5)}
+.toggle button.sel-P{background:var(--teal);border-color:var(--teal);color:#fff}
+.toggle button.sel-F{background:var(--red);border-color:var(--red);color:#fff}
+.toggle button.sel-J{background:var(--amber);border-color:var(--amber);color:#fff}
+.barra-salvar{
+  position:sticky;bottom:0;margin-top:18px;
+  background:linear-gradient(to top,var(--bg) 65%,transparent);
+  padding:18px 0 14px;
+  display:flex;gap:10px;justify-content:flex-end;
+}
+
+/* ============ ALUNOS / FREQUÊNCIA ============ */
+.freq-row{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:16px 20px;
+}
+.freq-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.freq-head .nome{font-weight:700;font-size:.92rem;flex:1;min-width:160px}
+.freq-head .pct{font-family:'Raleway',sans-serif;font-weight:800;font-size:1.05rem}
+.freq-head .det{font-size:.72rem;color:var(--muted)}
+.freq-barra{height:8px;background:var(--bg);border-radius:99px;margin-top:10px;overflow:hidden}
+.freq-fill{height:100%;border-radius:99px;transition:width .5s ease}
+.alerta-freq{
+  display:inline-block;margin-top:8px;
+  font-size:.68rem;font-weight:700;letter-spacing:.4px;
+  color:var(--red);background:rgba(226,96,107,.1);
+  border:1px solid rgba(226,96,107,.35);
+  padding:4px 10px;border-radius:99px;
+}
+
+/* ============ MODAL ============ */
+.modal-bg{
+  display:none;position:fixed;inset:0;z-index:50;
+  background:rgba(20,29,59,.55);backdrop-filter:blur(3px);
+  align-items:center;justify-content:center;padding:20px;
+}
+.modal-bg.aberto{display:flex}
+.modal{
+  background:var(--card);border-radius:18px;
+  width:100%;max-width:440px;
+  padding:28px;
+  box-shadow:0 20px 60px rgba(20,29,59,.35);
+  animation:fade .2s ease;
+}
+.modal h3{font-size:1.05rem;font-weight:800;margin-bottom:18px}
+.campo{margin-bottom:14px}
+.campo label{display:block;font-size:.72rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.campo input{
+  width:100%;font-family:'Montserrat',sans-serif;font-size:.9rem;
+  border:1.5px solid var(--border);border-radius:10px;
+  padding:12px 14px;color:var(--text);background:var(--bg);
+}
+.campo input:focus{outline:none;border-color:var(--blue);background:#fff}
+.modal-acoes{display:flex;gap:10px;justify-content:flex-end;margin-top:22px}
+
+/* ============ TOAST / LOADING ============ */
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--navy);color:#fff;
+  font-size:.85rem;font-weight:600;
+  padding:13px 24px;border-radius:12px;
+  box-shadow:0 8px 30px rgba(20,29,59,.4);
+  opacity:0;pointer-events:none;transition:all .3s ease;z-index:99;
+  max-width:90vw;text-align:center;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.ok{background:#2E8B8A}
+.toast.erro{background:var(--red)}
+
+#loading{
+  position:fixed;inset:0;z-index:100;
+  background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+}
+.spinner{
+  width:44px;height:44px;border-radius:50%;
+  border:4px solid var(--border);border-top-color:var(--blue);
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loading p{font-size:.8rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+@media (max-width:560px){
+  .aula-card{padding:14px 16px}
+  .aula-acoes{width:100%;justify-content:flex-end}
+  .contador{width:100%;justify-content:space-around}
+  .toggle{width:100%;justify-content:stretch}
+  .toggle button{flex:1}
+}
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <p>Carregando dados</p>
+</div>
+
+<header>
+  <div class="header-inner">
+    <div class="header-top">
+      <img src="https://i.imgur.com/f4yHMMN.png" alt="SAFE Escola de Aviação">
+      <div class="header-title">
+        <h1>Controle de Presença</h1>
+        <p>SAFE Escola de Aviação</p>
+      </div>
+      <span class="curso-badge">✈ Preparatório Tripulante Azul</span>
+    </div>
+    <nav>
+      <button class="ativo" data-view="aulas" onclick="trocarView('aulas',this)">Aulas</button>
+      <button data-view="alunos" onclick="trocarView('alunos',this)">Frequência dos alunos</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+  <!-- ================= VIEW AULAS ================= -->
+  <section id="view-aulas" class="view ativa">
+    <div class="stats">
+      <div class="stat"><div class="num" id="st-alunos">–</div><div class="lbl">Alunos ativos</div></div>
+      <div class="stat azul"><div class="num" id="st-aulas">–</div><div class="lbl">Aulas realizadas</div></div>
+      <div class="stat teal"><div class="num" id="st-freq">–</div><div class="lbl">Frequência média</div></div>
+    </div>
+
+    <div class="secao-head">
+      <h2>Aulas do curso</h2>
+      <button class="btn btn-primario" onclick="abrirModal()">+ Nova aula</button>
+    </div>
+    <div class="card-lista" id="lista-aulas"></div>
+  </section>
+
+  <!-- ================= VIEW CHAMADA ================= -->
+  <section id="view-chamada" class="view">
+    <div class="chamada-topo">
+      <div class="info">
+        <h2 id="ch-tema">–</h2>
+        <p id="ch-sub">–</p>
+      </div>
+      <div class="contador">
+        <div><div class="n p" id="ct-p">0</div><div class="l">Presentes</div></div>
+        <div><div class="n f" id="ct-f">0</div><div class="l">Faltas</div></div>
+        <div><div class="n j" id="ct-j">0</div><div class="l">Justif.</div></div>
+      </div>
+    </div>
+    <div class="card-lista" id="lista-chamada"></div>
+    <div class="barra-salvar">
+      <button class="btn btn-fantasma" onclick="voltarAulas()">Cancelar</button>
+      <button class="btn btn-azul" id="btn-salvar" onclick="salvarChamada()">Salvar chamada</button>
+    </div>
+  </section>
+
+  <!-- ================= VIEW ALUNOS ================= -->
+  <section id="view-alunos" class="view">
+    <div class="secao-head">
+      <h2>Frequência individual</h2>
+      <span style="font-size:.75rem;color:var(--muted)">Mínimo exigido: 75%</span>
+    </div>
+    <div class="card-lista" id="lista-freq"></div>
+  </section>
+
+</main>
+
+<!-- ================= MODAL NOVA AULA ================= -->
+<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)fecharModal()">
+  <div class="modal">
+    <h3>Nova aula</h3>
+    <div class="campo">
+      <label for="m-data">Data</label>
+      <input type="date" id="m-data">
+    </div>
+    <div class="campo">
+      <label for="m-tema">Tema da aula</label>
+      <input type="text" id="m-tema" placeholder="Ex.: Regulamentação da Aviação Civil" maxlength="80">
+    </div>
+    <div class="campo">
+      <label for="m-instrutor">Instrutor</label>
+      <input type="text" id="m-instrutor" placeholder="Nome do instrutor" maxlength="60">
+    </div>
+    <div class="modal-acoes">
+      <button class="btn btn-fantasma" onclick="fecharModal()">Cancelar</button>
+      <button class="btn btn-primario" id="btn-criar" onclick="criarAula()">Criar aula</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+ * CONFIGURAÇÃO
+ * Cole aqui a URL do App da Web do Apps Script
+ * ============================================================ */
+const API_URL = 'https://script.google.com/macros/s/AKfycbxDeoHU_-P0Vnne3k2DbUm0DnsLK8yn-U_Xpb7TPF5JCBzBIWIM-CtUATJg6b4PjaQ/exec';
+
+const FREQ_MINIMA = 75; // % mínima exigida no curso
+
+let DB = { alunos: [], aulas: [], presencas: [] };
+let chamadaAtual = { idAula: null, marcacoes: {} };
+
+const MESES = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+
+/* ============================================================
+ * API
+ * ============================================================ */
+async function api(params) {
+  const url = API_URL + '?' + new URLSearchParams(params).toString();
+  const res = await fetch(url);
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.erro || 'Erro no servidor');
+  return json;
+}
+
+async function carregar() {
+  try {
+    DB = await api({ action: 'init' });
+    renderTudo();
+  } catch (e) {
+    toast('Erro ao carregar: ' + e.message, 'erro');
+  } finally {
+    document.getElementById('loading').style.display = 'none';
+  }
+}
+
+/* ============================================================
+ * RENDER
+ * ============================================================ */
+function renderTudo() {
+  renderStats();
+  renderAulas();
+  renderFrequencia();
+}
+
+function renderStats() {
+  const realizadas = DB.aulas.filter(a => a.status === 'REALIZADA').length;
+  document.getElementById('st-alunos').textContent = DB.alunos.length;
+  document.getElementById('st-aulas').textContent = realizadas;
+
+  const total = DB.presencas.length;
+  const presentes = DB.presencas.filter(p => p.status === 'P').length;
+  document.getElementById('st-freq').textContent =
+    total ? Math.round(presentes / total * 100) + '%' : '–';
+}
+
+function renderAulas() {
+  const el = document.getElementById('lista-aulas');
+  if (!DB.aulas.length) {
+    el.innerHTML = '<div class="vazio">Nenhuma aula cadastrada ainda.<br>Crie a primeira aula para iniciar o controle de presença.</div>';
+    return;
+  }
+
+  const ordenadas = [...DB.aulas].sort((a, b) => b.data.localeCompare(a.data));
+  el.innerHTML = ordenadas.map(a => {
+    const [ano, mes, dia] = a.data.split('-');
+    const feita = a.status === 'REALIZADA';
+    return `
+    <div class="aula-card">
+      <div class="aula-data">
+        <div class="dia">${dia}</div>
+        <div class="mes">${MESES[+mes - 1]}/${ano.slice(2)}</div>
+      </div>
+      <div class="aula-info">
+        <div class="tema">${esc(a.tema)}</div>
+        <div class="sub">${a.instrutor ? 'Instrutor: ' + esc(a.instrutor) : 'Instrutor não informado'}</div>
+      </div>
+      <span class="tag ${feita ? 'tag-feita' : 'tag-pendente'}">${feita ? 'Chamada feita' : 'Pendente'}</span>
+      <div class="aula-acoes">
+        <button class="btn ${feita ? 'btn-fantasma' : 'btn-azul'} btn-mini" onclick="abrirChamada('${a.id}')">
+          ${feita ? 'Editar chamada' : 'Fazer chamada'}
+        </button>
+        <button class="btn-excluir" title="Excluir aula" onclick="excluirAula('${a.id}')">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderFrequencia() {
+  const el = document.getElementById('lista-freq');
+  const aulasFeitas = DB.aulas.filter(a => a.status === 'REALIZADA').length;
+
+  if (!DB.alunos.length) {
+    el.innerHTML = '<div class="vazio">Nenhum aluno ativo. Cadastre os alunos na aba ALUNOS da planilha.</div>';
+    return;
+  }
+  if (!aulasFeitas) {
+    el.innerHTML = '<div class="vazio">Nenhuma chamada realizada ainda. A frequência aparece aqui após a primeira chamada.</div>';
+    return;
+  }
+
+  el.innerHTML = DB.alunos.map(al => {
+    const regs = DB.presencas.filter(p => p.idAluno === al.id);
+    const p = regs.filter(r => r.status === 'P').length;
+    const j = regs.filter(r => r.status === 'J').length;
+    const f = regs.filter(r => r.status === 'F').length;
+    const pct = regs.length ? Math.round(p / regs.length * 100) : 0;
+    const cor = pct >= FREQ_MINIMA ? 'var(--teal)' : pct >= 60 ? 'var(--amber)' : 'var(--red)';
+    return `
+    <div class="freq-row">
+      <div class="freq-head">
+        <span class="nome">${esc(al.nome)}${al.canac ? ' <span style="font-weight:400;color:var(--muted);font-size:.75rem">· CANAC ' + esc(al.canac) + '</span>' : ''}</span>
+        <span class="det">${p}P · ${f}F · ${j}J</span>
+        <span class="pct" style="color:${cor}">${regs.length ? pct + '%' : '–'}</span>
+      </div>
+      <div class="freq-barra"><div class="freq-fill" style="width:${pct}%;background:${cor}"></div></div>
+      ${regs.length && pct < FREQ_MINIMA ? '<span class="alerta-freq">⚠ Abaixo da frequência mínima</span>' : ''}
+    </div>`;
+  }).join('');
+}
+
+/* ============================================================
+ * CHAMADA
+ * ============================================================ */
+function abrirChamada(idAula) {
+  const aula = DB.aulas.find(a => a.id === idAula);
+  if (!aula) return;
+
+  chamadaAtual = { idAula, marcacoes: {} };
+
+  // Pré-carrega marcações existentes (edição) ou Presente por padrão
+  DB.alunos.forEach(al => {
+    const existente = DB.presencas.find(p => p.idAula === idAula && p.idAluno === al.id);
+    chamadaAtual.marcacoes[al.id] = existente ? existente.status : 'P';
+  });
+
+  const [ano, mes, dia] = aula.data.split('-');
+  document.getElementById('ch-tema').textContent = aula.tema;
+  document.getElementById('ch-sub').textContent =
+    `${dia}/${mes}/${ano}` + (aula.instrutor ? ' · Instrutor: ' + aula.instrutor : '');
+
+  document.getElementById('lista-chamada').innerHTML = DB.alunos.map(al => `
+    <div class="aluno-row">
+      <div class="aluno-nome">
+        <div class="n">${esc(al.nome)}</div>
+        ${al.canac ? '<div class="c">CANAC ' + esc(al.canac) + '</div>' : ''}
+      </div>
+      <div class="toggle" data-aluno="${al.id}">
+        <button onclick="marcar('${al.id}','P',this)" title="Presente">P</button>
+        <button onclick="marcar('${al.id}','F',this)" title="Falta">F</button>
+        <button onclick="marcar('${al.id}','J',this)" title="Falta justificada">J</button>
+      </div>
+    </div>`).join('');
+
+  // Aplica seleção inicial
+  Object.entries(chamadaAtual.marcacoes).forEach(([id, st]) => {
+    const grp = document.querySelector(`.toggle[data-aluno="${id}"]`);
+    const idx = { P: 0, F: 1, J: 2 }[st];
+    grp.children[idx].classList.add('sel-' + st);
+  });
+
+  atualizarContador();
+  trocarView('chamada');
+  window.scrollTo({ top: 0 });
+}
+
+function marcar(idAluno, status, btn) {
+  chamadaAtual.marcacoes[idAluno] = status;
+  const grp = btn.parentElement;
+  [...grp.children].forEach(b => b.className = '');
+  btn.classList.add('sel-' + status);
+  atualizarContador();
+}
+
+function atualizarContador() {
+  const v = Object.values(chamadaAtual.marcacoes);
+  document.getElementById('ct-p').textContent = v.filter(s => s === 'P').length;
+  document.getElementById('ct-f').textContent = v.filter(s => s === 'F').length;
+  document.getElementById('ct-j').textContent = v.filter(s => s === 'J').length;
+}
+
+async function salvarChamada() {
+  const btn = document.getElementById('btn-salvar');
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+  try {
+    const dados = Object.entries(chamadaAtual.marcacoes)
+      .map(([idAluno, status]) => ({ idAluno, status }));
+
+    await api({
+      action: 'salvarChamada',
+      idAula: chamadaAtual.idAula,
+      dados: JSON.stringify(dados)
+    });
+
+    // Atualiza estado local sem recarregar tudo
+    DB.presencas = DB.presencas.filter(p => p.idAula !== chamadaAtual.idAula);
+    dados.forEach(d => DB.presencas.push({ idAula: chamadaAtual.idAula, idAluno: d.idAluno, status: d.status }));
+    const aula = DB.aulas.find(a => a.id === chamadaAtual.idAula);
+    if (aula) aula.status = 'REALIZADA';
+
+    renderTudo();
+    voltarAulas();
+    toast('Chamada salva com sucesso', 'ok');
+  } catch (e) {
+    toast('Erro ao salvar: ' + e.message, 'erro');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Salvar chamada';
+  }
+}
+
+/* ============================================================
+ * AULAS - CRIAR / EXCLUIR
+ * ============================================================ */
+function abrirModal() {
+  document.getElementById('m-data').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('m-tema').value = '';
+  document.getElementById('m-instrutor').value = '';
+  document.getElementById('modal-bg').classList.add('aberto');
+  document.getElementById('m-tema').focus();
+}
+function fecharModal() {
+  document.getElementById('modal-bg').classList.remove('aberto');
+}
+
+async function criarAula() {
+  const data = document.getElementById('m-data').value;
+  const tema = document.getElementById('m-tema').value.trim();
+  const instrutor = document.getElementById('m-instrutor').value.trim();
+
+  if (!data || !tema) { toast('Preencha a data e o tema da aula', 'erro'); return; }
+
+  const btn = document.getElementById('btn-criar');
+  btn.disabled = true;
+  btn.textContent = 'Criando...';
+  try {
+    const r = await api({ action: 'criarAula', data, tema, instrutor });
+    DB.aulas.push({ id: r.id, data, tema, instrutor, status: 'AGENDADA' });
+    renderTudo();
+    fecharModal();
+    toast('Aula criada', 'ok');
+  } catch (e) {
+    toast('Erro: ' + e.message, 'erro');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Criar aula';
+  }
+}
+
+async function excluirAula(idAula) {
+  const aula = DB.aulas.find(a => a.id === idAula);
+  if (!confirm(`Excluir a aula "${aula ? aula.tema : ''}"?\nAs presenças registradas nela também serão removidas.`)) return;
+
+  try {
+    await api({ action: 'excluirAula', idAula });
+    DB.aulas = DB.aulas.filter(a => a.id !== idAula);
+    DB.presencas = DB.presencas.filter(p => p.idAula !== idAula);
+    renderTudo();
+    toast('Aula excluída', 'ok');
+  } catch (e) {
+    toast('Erro: ' + e.message, 'erro');
+  }
+}
+
+/* ============================================================
+ * NAVEGAÇÃO / UTILITÁRIOS
+ * ============================================================ */
+function trocarView(nome, btn) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('ativa'));
+  document.getElementById('view-' + nome).classList.add('ativa');
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('ativo'));
+  if (btn) btn.classList.add('ativo');
+  else {
+    const navBtn = document.querySelector(`nav button[data-view="${nome}"]`);
+    if (navBtn) navBtn.classList.add('ativo');
+  }
+}
+
+function voltarAulas() { trocarView('aulas'); }
+
+function toast(msg, tipo) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (tipo || '');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+carregar();
+</script>
+</body>
+</html>

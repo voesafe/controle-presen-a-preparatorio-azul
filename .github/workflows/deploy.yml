@@ -1,0 +1,34 @@
+name: Deploy para Google Apps Script
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalar clasp
+        run: npm install -g @google/clasp
+
+      - name: Autenticar clasp
+        run: |
+          echo '${{ secrets.CLASPRC_JSON }}' > ~/.clasprc.json
+
+      - name: Push código para Apps Script
+        run: clasp push --force
+
+      - name: Publicar nova versão (atualiza deployment existente)
+        run: |
+          clasp deploy \
+            --deploymentId AKfycbxDeoHU_-P0Vnne3k2DbUm0DnsLK8yn-U_Xpb7TPF5JCBzBIWIM-CtUATJg6b4PjaQ \
+            --description "Deploy automático — ${{ github.sha }}"
