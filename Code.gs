@@ -18,7 +18,6 @@
 var ABA_ALUNOS = 'ALUNOS';
 var ABA_AULAS = 'AULAS';
 var ABA_PRESENCAS = 'PRESENCAS';
-var ABA_INSTRUTORES = 'INSTRUTORES';
 
 /* ============================================================
  * SETUP - executar manualmente uma única vez
@@ -49,19 +48,9 @@ function setup() {
     formatarCabecalho(sp, 4);
   }
 
-  if (!ss.getSheetByName(ABA_INSTRUTORES)) {
-    var si = ss.insertSheet(ABA_INSTRUTORES);
-    si.getRange(1, 1, 1, 2).setValues([['NOME', 'STATUS']]);
-    si.getRange(2, 1, 2, 2).setValues([
-      ['Instrutor Exemplo 1', 'ATIVO'],
-      ['Instrutor Exemplo 2', 'ATIVO']
-    ]);
-    formatarCabecalho(si, 2);
-  }
-
   // Remove a aba padrão se ainda existir
   var padrao = ss.getSheetByName('Página1') || ss.getSheetByName('Sheet1');
-  if (padrao && ss.getSheets().length > 4) ss.deleteSheet(padrao);
+  if (padrao && ss.getSheets().length > 3) ss.deleteSheet(padrao);
 }
 
 function formatarCabecalho(sheet, numCols) {
@@ -131,12 +120,7 @@ function getInit() {
     return { idAula: String(r[0]), idAluno: String(r[1]), status: String(r[2]) };
   }).filter(function (p) { return p.idAula; });
 
-  var instrutores = lerAba(ss, ABA_INSTRUTORES).map(function (r) {
-    return { nome: String(r[0] || '').trim(), status: String(r[1] || 'ATIVO') };
-  }).filter(function (i) { return i.nome && i.status.toUpperCase() === 'ATIVO'; })
-    .map(function (i) { return i.nome; });
-
-  return { ok: true, alunos: alunos, aulas: aulas, presencas: presencas, instrutores: instrutores };
+  return { ok: true, alunos: alunos, aulas: aulas, presencas: presencas };
 }
 
 // Cria nova aula. Params: data (YYYY-MM-DD), tema, instrutor
