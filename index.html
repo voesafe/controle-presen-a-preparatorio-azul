@@ -224,12 +224,17 @@ main{max-width:1080px;margin:0 auto;padding:26px 24px 80px}
 .modal h3{font-size:1.05rem;font-weight:800;margin-bottom:18px}
 .campo{margin-bottom:14px}
 .campo label{display:block;font-size:.72rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
-.campo input{
+.campo input,.campo select{
   width:100%;font-family:'Montserrat',sans-serif;font-size:.9rem;
   border:1.5px solid var(--border);border-radius:10px;
   padding:12px 14px;color:var(--text);background:var(--bg);
 }
-.campo input:focus{outline:none;border-color:var(--blue);background:#fff}
+.campo input:focus,.campo select:focus{outline:none;border-color:var(--blue);background:#fff}
+.campo select{
+  appearance:none;-webkit-appearance:none;cursor:pointer;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%237A86A3' d='M6 8 0 0h12z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 14px center;padding-right:38px;
+}
 .modal-acoes{display:flex;gap:10px;justify-content:flex-end;margin-top:22px}
 
 /* ============ TOAST / LOADING ============ */
@@ -336,7 +341,10 @@ main{max-width:1080px;margin:0 auto;padding:26px 24px 80px}
   <section id="view-alunos" class="view">
     <div class="secao-head">
       <h2>Frequência individual</h2>
-      <span style="font-size:.75rem;color:var(--muted)">Mínimo exigido: 75%</span>
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <span style="font-size:.75rem;color:var(--muted)">Mínimo exigido: 75%</span>
+        <button class="btn btn-azul" id="btn-export" onclick="exportarPDF()">⬇ Exportar PDF</button>
+      </div>
     </div>
     <div class="card-lista" id="lista-freq"></div>
   </section>
@@ -352,12 +360,12 @@ main{max-width:1080px;margin:0 auto;padding:26px 24px 80px}
       <input type="date" id="m-data">
     </div>
     <div class="campo">
-      <label for="m-tema">Tema da aula</label>
-      <input type="text" id="m-tema" placeholder="Ex.: Regulamentação da Aviação Civil" maxlength="80">
+      <label for="m-tema">Matéria</label>
+      <select id="m-tema"></select>
     </div>
     <div class="campo">
       <label for="m-instrutor">Instrutor</label>
-      <input type="text" id="m-instrutor" placeholder="Nome do instrutor" maxlength="60">
+      <select id="m-instrutor"></select>
     </div>
     <div class="modal-acoes">
       <button class="btn btn-fantasma" onclick="fecharModal()">Cancelar</button>
@@ -368,6 +376,9 @@ main{max-width:1080px;margin:0 auto;padding:26px 24px 80px}
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
 <script>
 /* ============================================================
  * CONFIGURAÇÃO
@@ -377,8 +388,20 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxDeoHU_-P0Vnne3k2DbUm0
 
 const FREQ_MINIMA = 75; // % mínima exigida no curso
 
-let DB = { alunos: [], aulas: [], presencas: [] };
+// Matérias fixas do curso (dropdown). Instrutores vêm da aba INSTRUTORES da planilha.
+const MATERIAS = [
+  'Meteorologia',
+  'Regulamentos de Tráfego Aéreo',
+  'Performance',
+  'Gerenciamento de Anormalidades'
+];
+
+// Logo SAFE colorido (usado no PDF). raw.githubusercontent permite CORS.
+const LOGO_PDF_URL = 'https://raw.githubusercontent.com/voesafe/controle-presen-a-preparatorio-azul/main/logo-color.png';
+
+let DB = { alunos: [], aulas: [], presencas: [], instrutores: [] };
 let chamadaAtual = { idAula: null, marcacoes: {} };
+let logoPdfData = null; // cache do logo em base64 para o PDF
 
 const MESES = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
 
@@ -411,6 +434,20 @@ function renderTudo() {
   renderStats();
   renderAulas();
   renderFrequencia();
+  popularSelects();
+}
+
+function popularSelects() {
+  const selTema = document.getElementById('m-tema');
+  selTema.innerHTML = MATERIAS.map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
+
+  const selInst = document.getElementById('m-instrutor');
+  const lista = DB.instrutores || [];
+  if (!lista.length) {
+    selInst.innerHTML = '<option value="">— cadastre na aba INSTRUTORES —</option>';
+  } else {
+    selInst.innerHTML = lista.map(i => `<option value="${esc(i)}">${esc(i)}</option>`).join('');
+  }
 }
 
 function renderStats() {
@@ -585,8 +622,8 @@ async function salvarChamada() {
  * ============================================================ */
 function abrirModal() {
   document.getElementById('m-data').value = new Date().toISOString().slice(0, 10);
-  document.getElementById('m-tema').value = '';
-  document.getElementById('m-instrutor').value = '';
+  document.getElementById('m-tema').selectedIndex = 0;
+  document.getElementById('m-instrutor').selectedIndex = 0;
   document.getElementById('modal-bg').classList.add('aberto');
   document.getElementById('m-tema').focus();
 }
@@ -630,6 +667,211 @@ async function excluirAula(idAula) {
     toast('Aula excluída', 'ok');
   } catch (e) {
     toast('Erro: ' + e.message, 'erro');
+  }
+}
+
+/* ============================================================
+ * EXPORTAÇÃO PDF
+ * ============================================================ */
+const COR = {
+  navy: [29, 41, 81],
+  navyDeep: [20, 29, 59],
+  teal: [96, 192, 191],
+  red: [226, 96, 107],
+  amber: [226, 169, 91],
+  cinza: [122, 134, 163],
+  linha: [227, 232, 240]
+};
+
+async function carregarLogoPDF() {
+  if (logoPdfData) return logoPdfData;
+  try {
+    const res = await fetch(LOGO_PDF_URL);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    if (!blob.type.startsWith('image/')) return null; // evita 404/HTML virar "PNG corrompido"
+    logoPdfData = await new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(fr.result);
+      fr.onerror = reject;
+      fr.readAsDataURL(blob);
+    });
+  } catch (e) {
+    logoPdfData = null; // segue sem logo se falhar
+  }
+  return logoPdfData;
+}
+
+function dataBR(iso) {
+  const [a, m, d] = iso.split('-');
+  return `${d}/${m}/${a}`;
+}
+
+async function exportarPDF() {
+  const aulasFeitas = DB.aulas
+    .filter(a => a.status === 'REALIZADA')
+    .sort((a, b) => a.data.localeCompare(b.data));
+
+  if (!DB.alunos.length) { toast('Nenhum aluno ativo para exportar', 'erro'); return; }
+  if (!aulasFeitas.length) { toast('Nenhuma chamada realizada ainda', 'erro'); return; }
+
+  const btn = document.getElementById('btn-export');
+  btn.disabled = true;
+  btn.textContent = 'Gerando...';
+
+  try {
+    const logo = await carregarLogoPDF();
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const W = doc.internal.pageSize.getWidth();
+    const margin = 14;
+
+    /* ---------- CABEÇALHO ---------- */
+    if (logo) {
+      const lw = 50, lh = lw * (463 / 1563); // mantém proporção do logo
+      doc.addImage(logo, 'PNG', margin, 12, lw, lh);
+    }
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...COR.navy);
+    doc.setFontSize(17);
+    doc.text('RELATÓRIO DE FREQUÊNCIA', W - margin, 18, { align: 'right' });
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...COR.cinza);
+    doc.setFontSize(10);
+    doc.text('Curso Preparatório Tripulante Azul', W - margin, 25, { align: 'right' });
+
+    const hoje = new Date();
+    const emissao = `${String(hoje.getDate()).padStart(2, '0')}/${String(hoje.getMonth() + 1).padStart(2, '0')}/${hoje.getFullYear()}`;
+    doc.setFontSize(8.5);
+    doc.text(
+      `Emitido em ${emissao}   •   Aulas realizadas: ${aulasFeitas.length}   •   Frequência mínima exigida: ${FREQ_MINIMA}%`,
+      W - margin, 31, { align: 'right' }
+    );
+
+    doc.setDrawColor(...COR.linha);
+    doc.setLineWidth(0.4);
+    doc.line(margin, 35, W - margin, 35);
+
+    /* ---------- SEÇÃO 1: RESUMO POR ALUNO ---------- */
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...COR.navy);
+    doc.setFontSize(11);
+    doc.text('Resumo por aluno', margin, 43);
+
+    const resumo = DB.alunos.map((al, i) => {
+      const regs = DB.presencas.filter(p => p.idAluno === al.id);
+      const p = regs.filter(r => r.status === 'P').length;
+      const j = regs.filter(r => r.status === 'J').length;
+      const f = regs.filter(r => r.status === 'F').length;
+      const pct = regs.length ? Math.round(p / regs.length * 100) : 0;
+      const ok = pct >= FREQ_MINIMA;
+      return {
+        linha: [
+          String(i + 1), al.nome, al.canac || '—',
+          String(p), String(j), String(f), String(regs.length),
+          pct + '%', ok ? 'APROVADO' : 'ABAIXO DO MÍN.'
+        ],
+        ok
+      };
+    });
+
+    doc.autoTable({
+      startY: 47,
+      margin: { left: margin, right: margin },
+      head: [['#', 'Aluno', 'CANAC', 'Pres.', 'Just.', 'Faltas', 'Aulas', 'Freq.', 'Situação']],
+      body: resumo.map(r => r.linha),
+      theme: 'grid',
+      styles: { font: 'helvetica', fontSize: 9, cellPadding: 2.5, textColor: COR.navy, lineColor: COR.linha, lineWidth: 0.2 },
+      headStyles: { fillColor: COR.navy, textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center', fontSize: 8.5 },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 10 },
+        1: { cellWidth: 'auto' },
+        2: { halign: 'center', cellWidth: 26 },
+        3: { halign: 'center', cellWidth: 16 },
+        4: { halign: 'center', cellWidth: 16 },
+        5: { halign: 'center', cellWidth: 18 },
+        6: { halign: 'center', cellWidth: 16 },
+        7: { halign: 'center', cellWidth: 18, fontStyle: 'bold' },
+        8: { halign: 'center', cellWidth: 34, fontStyle: 'bold' }
+      },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      didParseCell: function (d) {
+        if (d.section !== 'body') return;
+        const ok = resumo[d.row.index].ok;
+        if (d.column.index === 7 || d.column.index === 8) {
+          d.cell.styles.textColor = ok ? [46, 139, 138] : COR.red;
+        }
+      }
+    });
+
+    /* ---------- SEÇÃO 2: DETALHAMENTO POR AULA ---------- */
+    let y = doc.lastAutoTable.finalY + 12;
+    if (y > doc.internal.pageSize.getHeight() - 40) { doc.addPage(); y = 20; }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...COR.navy);
+    doc.setFontSize(11);
+    doc.text('Detalhamento por aula', margin, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...COR.cinza);
+    doc.setFontSize(7.5);
+    doc.text('Legenda:  P = Presente   J = Justificada   F = Falta', margin, y + 5);
+
+    const head = ['Aluno'].concat(aulasFeitas.map(a => {
+      const [, m, d] = a.data.split('-');
+      return `${d}/${m}`;
+    }));
+
+    const body = DB.alunos.map(al => {
+      const row = [al.nome];
+      aulasFeitas.forEach(a => {
+        const reg = DB.presencas.find(p => p.idAula === a.id && p.idAluno === al.id);
+        row.push(reg ? reg.status : '—');
+      });
+      return row;
+    });
+
+    doc.autoTable({
+      startY: y + 9,
+      margin: { left: margin, right: margin },
+      head: [head],
+      body: body,
+      theme: 'grid',
+      styles: { font: 'helvetica', fontSize: 8, cellPadding: 1.8, halign: 'center', textColor: COR.navy, lineColor: COR.linha, lineWidth: 0.2 },
+      headStyles: { fillColor: COR.navy, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7.5, halign: 'center' },
+      columnStyles: { 0: { halign: 'left', cellWidth: 'auto', fontStyle: 'normal' } },
+      didParseCell: function (d) {
+        if (d.section !== 'body' || d.column.index === 0) return;
+        const v = d.cell.raw;
+        if (v === 'P') { d.cell.styles.fillColor = COR.teal; d.cell.styles.textColor = [255, 255, 255]; d.cell.styles.fontStyle = 'bold'; }
+        else if (v === 'F') { d.cell.styles.fillColor = COR.red; d.cell.styles.textColor = [255, 255, 255]; d.cell.styles.fontStyle = 'bold'; }
+        else if (v === 'J') { d.cell.styles.fillColor = COR.amber; d.cell.styles.textColor = [255, 255, 255]; d.cell.styles.fontStyle = 'bold'; }
+        else { d.cell.styles.textColor = COR.cinza; }
+      }
+    });
+
+    /* ---------- RODAPÉ EM TODAS AS PÁGINAS ---------- */
+    const totalPg = doc.internal.getNumberOfPages();
+    const H = doc.internal.pageSize.getHeight();
+    for (let i = 1; i <= totalPg; i++) {
+      doc.setPage(i);
+      doc.setDrawColor(...COR.linha);
+      doc.setLineWidth(0.3);
+      doc.line(margin, H - 12, W - margin, H - 12);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(...COR.cinza);
+      doc.text('SAFE Escola de Aviação — Documento gerado automaticamente', margin, H - 7);
+      doc.text(`Página ${i} de ${totalPg}`, W - margin, H - 7, { align: 'right' });
+    }
+
+    doc.save(`Frequencia_Preparatorio_Azul_${emissao.replace(/\//g, '-')}.pdf`);
+    toast('PDF gerado com sucesso', 'ok');
+  } catch (e) {
+    toast('Erro ao gerar PDF: ' + e.message, 'erro');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⬇ Exportar PDF';
   }
 }
 
