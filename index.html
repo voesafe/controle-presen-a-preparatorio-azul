@@ -270,11 +270,16 @@ main{max-width:1080px;margin:0 auto;padding:26px 24px 80px}
   *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
 }
 @media (max-width:560px){
+  .stats{grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px}
+  .stat{padding:13px 10px}
+  .stat .num{font-size:1.4rem}
+  .stat .lbl{font-size:.56rem;letter-spacing:.3px;margin-top:3px}
   .aula-card{padding:14px 16px}
   .aula-acoes{width:100%;justify-content:flex-end}
   .contador{width:100%;justify-content:space-around}
   .toggle{width:100%;justify-content:stretch}
   .toggle button{flex:1}
+  #selo{display:none}
 }
 </style>
 </head>
@@ -996,10 +1001,10 @@ function esc(s) {
 carregar();
 </script>
 
-<img
+<img id="selo"
   src="https://raw.githubusercontent.com/voesafe/controle-presen-a-preparatorio-azul/main/selo_escola_recomendada_2021-1654252de020e2_lg.png"
   alt="Escola Recomendada Azul"
-  style="position:fixed;bottom:16px;right:16px;width:80px;opacity:0.55;pointer-events:none;z-index:999;"
+  style="position:fixed;bottom:16px;right:16px;width:80px;opacity:0.55;pointer-events:none;z-index:5;"
 >
 </body>
 </html>
