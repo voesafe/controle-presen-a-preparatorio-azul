@@ -150,6 +150,11 @@ main{max-width:1080px;margin:0 auto;padding:26px 24px 80px}
 .chamada-topo .info{flex:1;min-width:200px}
 .chamada-topo .info h2{font-size:1.05rem;font-weight:800}
 .chamada-topo .info p{font-size:.78rem;color:rgba(255,255,255,.65);margin-top:4px}
+.ch-data-row{display:flex;align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap}
+.ch-data-input{font-size:.78rem;font-weight:600;font-family:inherit;border:1px solid rgba(255,255,255,.25);border-radius:6px;background:rgba(255,255,255,.1);color:#fff;padding:4px 8px;cursor:pointer;transition:border-color .15s,background .15s}
+.ch-data-input:focus{outline:none;border-color:rgba(255,255,255,.55);background:rgba(255,255,255,.18)}
+.ch-data-input::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.7;cursor:pointer}
+.ch-inst{font-size:.78rem;color:rgba(255,255,255,.65)}
 .contador{display:flex;gap:18px}
 .contador div{text-align:center}
 .contador .n{font-family:'Raleway',sans-serif;font-size:1.4rem;font-weight:800}
@@ -338,7 +343,10 @@ main{max-width:1080px;margin:0 auto;padding:26px 24px 80px}
     <div class="chamada-topo">
       <div class="info">
         <h2 id="ch-tema">–</h2>
-        <p id="ch-sub">–</p>
+        <div class="ch-data-row">
+          <input type="date" id="ch-data" class="ch-data-input" title="Data da aula (editável)">
+          <span id="ch-instrutor" class="ch-inst"></span>
+        </div>
       </div>
       <div class="contador">
         <div><div class="n p" id="ct-p">0</div><div class="l">Presentes</div></div>
@@ -614,10 +622,9 @@ function abrirChamada(idAula) {
     chamadaAtual.marcacoes[al.id] = existente ? existente.status : 'P';
   });
 
-  const [ano, mes, dia] = aula.data.split('-');
   document.getElementById('ch-tema').textContent = aula.tema;
-  document.getElementById('ch-sub').textContent =
-    `${dia}/${mes}/${ano}` + (aula.instrutor ? ' · Instrutor: ' + aula.instrutor : '');
+  document.getElementById('ch-data').value = aula.data;
+  document.getElementById('ch-instrutor').textContent = aula.instrutor ? '· Instrutor: ' + aula.instrutor : '';
 
   document.getElementById('lista-chamada').innerHTML = DB.alunos.map(al => `
     <div class="aluno-row">
@@ -667,17 +674,20 @@ async function salvarChamada() {
     const dados = Object.entries(chamadaAtual.marcacoes)
       .map(([idAluno, status]) => ({ idAluno, status }));
 
-    await api({
-      action: 'salvarChamada',
-      idAula: chamadaAtual.idAula,
-      dados: JSON.stringify(dados)
-    });
+    const novaData = document.getElementById('ch-data').value;
+    const aula = DB.aulas.find(a => a.id === chamadaAtual.idAula);
+    const params = { action: 'salvarChamada', idAula: chamadaAtual.idAula, dados: JSON.stringify(dados) };
+    if (novaData && aula && novaData !== aula.data) params.novaData = novaData;
+
+    await api(params);
 
     // Atualiza estado local sem recarregar tudo
     DB.presencas = DB.presencas.filter(p => p.idAula !== chamadaAtual.idAula);
     dados.forEach(d => DB.presencas.push({ idAula: chamadaAtual.idAula, idAluno: d.idAluno, status: d.status }));
-    const aula = DB.aulas.find(a => a.id === chamadaAtual.idAula);
-    if (aula) aula.status = 'REALIZADA';
+    if (aula) {
+      aula.status = 'REALIZADA';
+      if (novaData) aula.data = novaData;
+    }
 
     renderTudo();
     voltarAulas();

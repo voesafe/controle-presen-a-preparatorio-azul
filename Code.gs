@@ -161,12 +161,13 @@ function salvarChamada(p) {
     sheet.getRange(sheet.getLastRow() + 1, 1, linhas.length, 4).setValues(linhas);
   }
 
-  // Marca a aula como realizada
+  // Marca a aula como realizada e atualiza data se informada
   var sheetAulas = ss.getSheetByName(ABA_AULAS);
   var aulas = sheetAulas.getDataRange().getValues();
   for (var j = 1; j < aulas.length; j++) {
     if (String(aulas[j][0]) === String(p.idAula)) {
       sheetAulas.getRange(j + 1, 5).setValue('REALIZADA');
+      if (p.novaData) sheetAulas.getRange(j + 1, 2).setValue(p.novaData);
       break;
     }
   }
