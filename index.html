@@ -206,6 +206,15 @@ main{max-width:1080px;margin:0 auto;padding:26px 24px 80px}
   border:1px solid rgba(226,96,107,.35);
   padding:4px 10px;border-radius:99px;
 }
+.mat-lista{margin-top:8px;display:flex;flex-direction:column}
+.mat-line{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--border)}
+.mat-line:first-child{border-top:none}
+.mat-nome{flex:1;min-width:0;font-size:.82rem;font-weight:600}
+.mat-bar{width:70px;height:6px;background:var(--bg);border-radius:99px;overflow:hidden;flex-shrink:0}
+.mat-fill{height:100%;border-radius:99px;transition:width .5s ease}
+.mat-det{font-size:.7rem;color:var(--muted);width:36px;text-align:right;flex-shrink:0}
+.mat-pct{font-family:'Raleway',sans-serif;font-weight:800;font-size:.85rem;width:42px;text-align:right;flex-shrink:0}
+.mat-vazio{font-size:.72rem;color:var(--muted);font-style:italic}
 
 /* ============ MODAL ============ */
 .modal-bg{
@@ -520,6 +529,31 @@ function renderAulas() {
   }).join('');
 }
 
+// Calcula a frequência de cada aluno agrupada POR MATÉRIA (exigência da Azul).
+// Retorna { materias:[nomes], porAluno:[{ aluno, linhas:[{materia,total,registrados,presentes,pct}] }] }
+function calcFrequencia() {
+  const materias = CURSO.map(c => c.materia);
+  const realizadas = DB.aulas.filter(a => a.status === 'REALIZADA');
+  realizadas.forEach(a => { if (!materias.includes(a.tema)) materias.push(a.tema); });
+
+  const aulasPorMat = {};
+  materias.forEach(m => { aulasPorMat[m] = []; });
+  realizadas.forEach(a => { aulasPorMat[a.tema].push(a.id); });
+
+  const porAluno = DB.alunos.map(al => {
+    const linhas = materias.map(m => {
+      const ids = aulasPorMat[m];
+      const regs = DB.presencas.filter(p => p.idAluno === al.id && ids.includes(p.idAula));
+      const presentes = regs.filter(r => r.status === 'P').length;
+      const pct = regs.length ? Math.round(presentes / regs.length * 100) : null;
+      return { materia: m, total: ids.length, registrados: regs.length, presentes: presentes, pct: pct };
+    });
+    return { aluno: al, linhas: linhas };
+  });
+
+  return { materias: materias, porAluno: porAluno };
+}
+
 function renderFrequencia() {
   const el = document.getElementById('lista-freq');
   const aulasFeitas = DB.aulas.filter(a => a.status === 'REALIZADA').length;
@@ -533,22 +567,34 @@ function renderFrequencia() {
     return;
   }
 
-  el.innerHTML = DB.alunos.map(al => {
-    const regs = DB.presencas.filter(p => p.idAluno === al.id);
-    const p = regs.filter(r => r.status === 'P').length;
-    const j = regs.filter(r => r.status === 'J').length;
-    const f = regs.filter(r => r.status === 'F').length;
-    const pct = regs.length ? Math.round(p / regs.length * 100) : 0;
-    const cor = pct >= FREQ_MINIMA ? 'var(--teal)' : pct >= 60 ? 'var(--amber)' : 'var(--red)';
+  const { porAluno } = calcFrequencia();
+
+  el.innerHTML = porAluno.map(({ aluno, linhas }) => {
+    const algumBaixo = linhas.some(l => l.pct !== null && l.pct < FREQ_MINIMA);
+
+    const linhasHtml = linhas.map(l => {
+      if (l.total === 0) {
+        return `<div class="mat-line">
+          <span class="mat-nome">${esc(l.materia)}</span>
+          <span class="mat-vazio">sem aulas</span>
+        </div>`;
+      }
+      const cor = l.pct >= FREQ_MINIMA ? 'var(--teal)' : l.pct >= 60 ? 'var(--amber)' : 'var(--red)';
+      return `<div class="mat-line">
+        <span class="mat-nome">${esc(l.materia)}</span>
+        <div class="mat-bar"><div class="mat-fill" style="width:${l.pct}%;background:${cor}"></div></div>
+        <span class="mat-det">${l.presentes}/${l.registrados}</span>
+        <span class="mat-pct" style="color:${cor}">${l.pct}%</span>
+      </div>`;
+    }).join('');
+
     return `
     <div class="freq-row">
       <div class="freq-head">
-        <span class="nome">${esc(al.nome)}${al.canac ? ' <span style="font-weight:400;color:var(--muted);font-size:.75rem">· CANAC ' + esc(al.canac) + '</span>' : ''}</span>
-        <span class="det">${p}P · ${f}F · ${j}J</span>
-        <span class="pct" style="color:${cor}">${regs.length ? pct + '%' : '–'}</span>
+        <span class="nome">${esc(aluno.nome)}${aluno.canac ? ' <span style="font-weight:400;color:var(--muted);font-size:.75rem">· CANAC ' + esc(aluno.canac) + '</span>' : ''}</span>
       </div>
-      <div class="freq-barra"><div class="freq-fill" style="width:${pct}%;background:${cor}"></div></div>
-      ${regs.length && pct < FREQ_MINIMA ? '<span class="alerta-freq">⚠ Abaixo da frequência mínima</span>' : ''}
+      <div class="mat-lista">${linhasHtml}</div>
+      ${algumBaixo ? '<span class="alerta-freq">⚠ Abaixo do mínimo em alguma matéria</span>' : ''}
     </div>`;
   }).join('');
 }
@@ -846,55 +892,42 @@ async function exportarPDF() {
     doc.setLineWidth(0.4);
     doc.line(margin, 35, W - margin, 35);
 
-    /* ---------- SEÇÃO 1: RESUMO POR ALUNO ---------- */
+    /* ---------- SEÇÃO 1: FREQUÊNCIA POR MATÉRIA ---------- */
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...COR.navy);
     doc.setFontSize(11);
-    doc.text('Resumo por aluno', margin, 43);
+    doc.text('Frequência por matéria', margin, 43);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...COR.cinza);
+    doc.setFontSize(7.5);
+    doc.text('% de presença de cada aluno por matéria · vermelho indica abaixo de ' + FREQ_MINIMA + '%', margin, 47.5);
 
-    const resumo = DB.alunos.map((al, i) => {
-      const regs = DB.presencas.filter(p => p.idAluno === al.id);
-      const p = regs.filter(r => r.status === 'P').length;
-      const j = regs.filter(r => r.status === 'J').length;
-      const f = regs.filter(r => r.status === 'F').length;
-      const pct = regs.length ? Math.round(p / regs.length * 100) : 0;
-      const ok = pct >= FREQ_MINIMA;
-      return {
-        linha: [
-          String(i + 1), al.nome, al.canac || '—',
-          String(p), String(j), String(f), String(regs.length),
-          pct + '%', ok ? 'APROVADO' : 'ABAIXO DO MÍN.'
-        ],
-        ok
-      };
+    const freq = calcFrequencia();
+    const matHead = ['#', 'Aluno', 'CANAC'].concat(freq.materias);
+    const matBody = freq.porAluno.map((row, i) => {
+      const cels = [String(i + 1), row.aluno.nome, row.aluno.canac || '—'];
+      row.linhas.forEach(l => cels.push(l.total === 0 ? '—' : l.pct + '%'));
+      return cels;
     });
 
+    const matColStyles = { 0: { halign: 'center', cellWidth: 10 }, 2: { halign: 'center', cellWidth: 24 } };
+    for (let c = 3; c < 3 + freq.materias.length; c++) matColStyles[c] = { halign: 'center', fontStyle: 'bold' };
+
     doc.autoTable({
-      startY: 47,
+      startY: 51,
       margin: { left: margin, right: margin },
-      head: [['#', 'Aluno', 'CANAC', 'Pres.', 'Just.', 'Faltas', 'Aulas', 'Freq.', 'Situação']],
-      body: resumo.map(r => r.linha),
+      head: [matHead],
+      body: matBody,
       theme: 'grid',
       styles: { font: 'helvetica', fontSize: 9, cellPadding: 2.5, textColor: COR.navy, lineColor: COR.linha, lineWidth: 0.2 },
-      headStyles: { fillColor: COR.navy, textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center', fontSize: 8.5 },
-      columnStyles: {
-        0: { halign: 'center', cellWidth: 10 },
-        1: { cellWidth: 'auto' },
-        2: { halign: 'center', cellWidth: 26 },
-        3: { halign: 'center', cellWidth: 16 },
-        4: { halign: 'center', cellWidth: 16 },
-        5: { halign: 'center', cellWidth: 18 },
-        6: { halign: 'center', cellWidth: 16 },
-        7: { halign: 'center', cellWidth: 18, fontStyle: 'bold' },
-        8: { halign: 'center', cellWidth: 34, fontStyle: 'bold' }
-      },
+      headStyles: { fillColor: COR.navy, textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center', fontSize: 7.5, valign: 'middle' },
+      columnStyles: matColStyles,
       alternateRowStyles: { fillColor: [248, 250, 252] },
       didParseCell: function (d) {
-        if (d.section !== 'body') return;
-        const ok = resumo[d.row.index].ok;
-        if (d.column.index === 7 || d.column.index === 8) {
-          d.cell.styles.textColor = ok ? [46, 139, 138] : COR.red;
-        }
+        if (d.section !== 'body' || d.column.index < 3) return;
+        const v = d.cell.raw;
+        if (v === '—') { d.cell.styles.textColor = COR.cinza; }
+        else { d.cell.styles.textColor = parseInt(v, 10) >= FREQ_MINIMA ? [46, 139, 138] : COR.red; }
       }
     });
 
